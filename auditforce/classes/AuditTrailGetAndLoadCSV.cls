@@ -6,9 +6,9 @@ public class AuditTrailGetAndLoadCSV {
  EX: https://na15.salesforce.com
   
  */
-	public static List<String> allLines {get; set;}
 	private static Integer inputCharacterMax { get { return 100000; } set; } // this is a somewhat arbitrary character limit
 	public static String sessionId = UserInfo.getSessionId();
+    public static String firstRow = '';
   	public static void getTrail() {  
 		
 		//===================================================================
@@ -58,24 +58,25 @@ public class AuditTrailGetAndLoadCSV {
 		//trim off the existing header row, and replace it with one that has the correct fieldnames.		
 		csvContent = csvContent.removeStart('Date,User,Source Namespace Prefix,Action,Section,Delegate User\n');
 		csvContent = 'Date_String__c,Username__c,SourceName__c,Action__c,Section__c,Delegate_User__c\n' + csvContent; 
-        List<String> lines = new List<String>();
+        //List<String> lines = new List<String>();
+        String jobid = createBulkLoadJob();
         try {
-            allLines = new List<String>();
-            divideString(csvContent);
+            //allLines = new List<String>();
+            divideString(csvContent, jobid);
         } catch (System.ListException e) {
             System.debug('Limits exceeded?' + e.getMessage());
         }
-        String jobid = createBulkLoadJob();
-		breakCSVinBatchesAndSubmit(jobid);	
+        
+		//breakCSVinBatchesAndSubmit(jobid);	
         closeBulkJob(jobId);
         scheduleFuture();
     }
-    public static void breakCSVinBatchesAndSubmit(String jobid){
+    public static void breakCSVinBatchesAndSubmit(List<String> allLines, String jobid){
         Integer count = 0;
         Integer maxBatchSize = 9999;
         List<String> csvBatch = new List<String>();
-        System.debug('headers: '+allLines[0]);
-        csvBatch.add(allLines[0]);
+        System.debug('headers: '+firstRow);
+        csvBatch.add(firstRow);
         for(integer i=1;i<=allLines.size()-1;i++){
             count++;
             if(count <= allLines.size()){
@@ -90,7 +91,7 @@ public class AuditTrailGetAndLoadCSV {
                     batchCSVFile += '"';
                     addBatchtoJob(Blob.valueOf(batchCSVFile),jobId);
                     csvBatch = new List<String>();
-                    csvBatch.add(allLines[0]);
+                    csvBatch.add(firstRow);
                 }
                 
             }
@@ -234,7 +235,7 @@ public class AuditTrailGetAndLoadCSV {
 
 	public static String getDummyCSV() {
 		return
-		'Date,User,Action,Section,Delegate User\n'+
+		'Date,User,Source Namespace Prefix,Action,Section,Delegate User\n'+
 		'"10/5/2013 10:11:56 AM PDT","usergroup@danpeter.com","Changed AuditTrailImporter Apex Class code","Apex Class",""\n'+
 		'"10/5/2013 10:11:26 AM PDT","usergroup@danpeter.com","Changed AuditTrailImporter Apex Class code","Apex Class",""\n';
 	}
@@ -276,23 +277,33 @@ public class AuditTrailGetAndLoadCSV {
 		'</batchInfo>';
 	}
     
-    public static void divideString(String input) {
-        
-        Integer pivot = input.indexOf( '"\n', Integer.valueOf(Math.floor(input.length() / 2) ) );
-        
-        String left = input.substring(0,pivot);
-        String right = input.substring(pivot);
-        
-        if ( pivot < inputCharacterMax ) {
-            // split left and right chunks, add to allLines
-            List<String> leftLines = left.split('"\n');
-            List<String> rightLines = right.split('"\n');
-            allLines.addAll(leftLines);
-            allLines.addAll(rightLines);
-        }else {
-            // divide and conquer!
-            divideString(left);
-            divideString(right);
+    public static void divideString(String input, String jobId) {
+        System.debug('input: '+ input);
+        System.debug('input.length: '+ input.length());
+        if(input.length() > 0){
+            Integer pivot = input.indexOf( '"\n', Integer.valueOf(Math.floor(input.length() / 2) ) );
+            String left = input.substring(0,pivot);
+            String right = input.substring(pivot);
+            if(String.isBlank(firstRow)){
+                firstRow = input.substring(0, input.indexOf('\n'));
+                System.debug('firstRow: '+firstRow);
+                System.debug('pivot: '+ pivot);
+                System.debug('input.indexOf: '+ input.indexOf('\n'));
+                System.debug('pivot - input.indexOf: '+ (pivot - input.indexOf('\n')));
+                left = input.substring(input.indexOf('\n'),(pivot - input.indexOf('\n')));
+                right = input.substring(pivot - input.indexOf('\n'));
+            }
+            if ( pivot < inputCharacterMax ) {
+                // split left and right chunks, add to allLines
+                List<String> leftLines = left.split('"\n');
+                List<String> rightLines = right.split('"\n');
+                breakCSVinBatchesAndSubmit(leftLines, jobId);
+                breakCSVinBatchesAndSubmit(rightLines, jobId);
+            }else {
+                // divide and conquer!
+                divideString(left, jobId);
+                divideString(right, jobId);
+            }
         }
     }
     

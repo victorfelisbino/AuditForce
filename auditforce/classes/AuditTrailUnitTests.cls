@@ -13,7 +13,7 @@ public class AuditTrailUnitTests {
 		AuditTrailBatchDeleteExistingTemp a = new AuditTrailBatchDeleteExistingTemp();
 		a.maxDatetime = Datetime.now();
 		Id batchProcessId = Database.executeBatch(a);
-	 	System.AssertEquals(database.countquery('SELECT COUNT()FROM TEMP_Setup_Audit_Trail__c WHERE Section__c=\'Test Apex Class\''), 10);
+	 	System.AssertEquals(database.countquery('SELECT COUNT()FROM TEMP_Setup_Audit_Trail__c WHERE Section__c=\'Test Apex Class\''), 100);
 	 	Test.StopTest();
 	}
 
@@ -25,7 +25,7 @@ public class AuditTrailUnitTests {
 		Id batchProcessId = Database.executeBatch(a);
 	 	Test.StopTest();
 	 	
-		System.AssertEquals(database.countquery('SELECT COUNT()FROM Setup_Audit_Trail__c WHERE Section__c=\'Test Apex Class\''), 10);  	 	
+		System.AssertEquals(database.countquery('SELECT COUNT()FROM Setup_Audit_Trail__c WHERE Section__c=\'Test Apex Class\''), 100);  	 	
 	} 
 
 
@@ -37,7 +37,7 @@ public class AuditTrailUnitTests {
 		Id batchProcessId = Database.executeBatch(a);
 	 	Test.StopTest();
 	 	
-		System.AssertEquals(database.countquery('SELECT COUNT()FROM Setup_Audit_Trail__c WHERE Section__c=\'Test Apex Class\''), 10);  	 	
+		System.AssertEquals(database.countquery('SELECT COUNT()FROM Setup_Audit_Trail__c WHERE Section__c=\'Test Apex Class\''), 100);  	 	
 	} 
 
 	static testMethod void testAuditTrailCheckBulkComplete() {
@@ -90,7 +90,7 @@ public class AuditTrailUnitTests {
 	static void insertTempObjects() {
 		//insert some test TEMP objects
 		List <TEMP_Setup_Audit_Trail__c> tList = new List<TEMP_Setup_Audit_Trail__c>(); 
-		for (Integer i = 0; i<10; i++){
+		for (Integer i = 0; i<100; i++){
 		tList.add(new TEMP_Setup_Audit_Trail__c(Username__c = 'usergroup@danpeter.com',
 												Section__c = 'Test Apex Class',
 												Date_String__c = '10/28/2013 2:24:51 PM PDT',
